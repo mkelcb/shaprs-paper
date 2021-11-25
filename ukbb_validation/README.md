@@ -20,7 +20,7 @@ install.packages( "http://www.well.ox.ac.uk/~gav/resources/rbgen_v1.1.4.tgz", re
 # Workflow
 
 The
-[Snakefile](https://https://github.com/mkelcb/shaprs-paper/-/blob/master/UKBB_validation/Snakefile)
+[Snakefile](https://https://github.com/mkelcb/shaprs-paper/-/blob/master/ukbb_validation/Snakefile)
 details the steps performed for analysis. The config.yaml file is not
 inlcuded in the repo because contains paths to data directories. For
 each PGS score an initial QC is performed checking if the SNPs in the
