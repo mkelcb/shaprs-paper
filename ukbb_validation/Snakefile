@@ -1,1 +1,377 @@
-/home/ev250/martinPRS/Snakefile
+##############################################################
+## Snakefile for evaluating PRS from Martin in UKBB data 
+##############################################################
+
+shell.prefix("source ~/.bashrc; ") 
+
+configfile: "config.yaml" 
+
+localrules: all
+
+import os
+import os.path
+import re
+import pandas as pd
+import gzip
+import glob
+
+
+
+subworkflow covid:
+    workdir:
+        "/home/ev250/ukbb_covid19"
+
+subworkflow rapido:
+    workdir:
+        "/home/ev250/rapidoPGS/revision"        
+
+home_covid = vars(vars(workflow)['_subworkflows']['covid'])['_workdir']
+home_rapido = vars(vars(workflow)['_subworkflows']['rapido'])['_workdir']
+
+
+
+def file_basename_dic(files):
+    """Giving a list of files make a dictionary with keys basename and value full name"""
+    dic={}
+    for f in files:
+        dic[os.path.basename(f)]=f
+    return(dic)
+ 
+
+def pgs_chrom_n(id, model_dir, chrom="CHR"):
+    """Make a dictionary with key a PGS ldpred2 file name  and values a pandas series. Each series has keys chromosomes and values the number of variants for it. id is the basename of the model, model_dir is the directory where the model is saved and chrom is the column in model for chromosome"""
+    dic={}
+    df = pd.read_csv(model_dir + "/" + id , sep=' ')
+    dic[id]=df[chrom].value_counts()
+    return(dic)
+
+
+def break_chrom(d, b=10**5):
+    """given an element from a dictionary with key PGS name and value a pandas series with keys chromosome and values total number of variants per chromosome (created with pgs_chrom_n,create a list with the end line to read from PGS file for each job"""
+    dic={}
+    keys=d.keys()
+    for key in keys:
+        v=[x for x in range(b, d[key], b)]
+        v.append(d[key])
+        dic[key] = v
+    return(dic)
+
+def model2trait(models,traits):
+    """Make a dic with key model and value trait"""
+    d={}
+    for t in traits:
+        for m in models:
+            if re.search("_" + t + "_", m):
+                d[m] = t
+    return(d)
+
+def trait2model(traits, models):
+    """Given a trait make a dic with key trait and values a list of all models for that trait"""
+    d={}
+    for t in traits:
+        m = [model  for model in models if re.search("_" + t + "_", model)]
+        if len(m):
+           d[t] = m
+
+    return(d)
+    
+# local variables
+traits = ['BRCA', 'T2D', 'CAD']
+all_models={**file_basename_dic(glob.glob(config['pgs'] + "/*")) }
+
+r=re.compile(".*PRSCSx_")
+prscsx=list(filter(r.match, all_models.keys()))
+
+model_trait = model2trait(all_models.keys(), traits)
+
+trait2models = trait2model(set(model_trait.values()), prscsx)
+
+model_qc_dir = config['output_dir'] + "/model_QC"
+model_qc = ["pgs_ukbb_" + x for x in all_models]
+pgs_dic_counts={s:pgs_chrom_n(s, model_qc_dir)[s] for s in model_qc} 
+
+#################################################################
+# Second wave of models
+
+models2={**file_basename_dic(glob.glob(config['output_dir'] + "/model2/*")) }
+
+model_qc_dir2 = config['output_dir'] + "/model_QC2"
+model_qc2 = ["pgs_ukbb_" + x for x in models2]
+# pgs_dic_counts2={s:pgs_chrom_n(s, model_qc_dir2)[s] for s in model_qc2}
+
+prscsx2=list(filter(r.match, models2.keys()))
+prscs=[x for x in models2.keys() if re.search('shaPRS_[A-Z]+_PRSCS_E', x)]
+
+model_trait2 = model2trait(models2.keys(), traits)
+
+trait2models2 = trait2model(set(model_trait2.values()), prscsx2)
+trait2prscs = trait2model(set(model_trait2.values()), prscs)
+
+# Include PRSCS
+prsx_all =["PRSCSx_E", "PRSCSx_ShaPRS_E", "PRSCS_E"]
+
+rule all:
+    input:
+        # expand(config['output_dir'] + "/model_QC/failed_{model}", model = all_models.keys()),
+        # [config["output_dir"] + "/ukbb_score/{model}/{model}.{chrom}.{breaks}.txt".format(model=s, chrom=str(bk), breaks=str(v)) for s in all_models for bk in break_chrom(d=pgs_dic_counts["pgs_ukbb_" + s]).keys() for v in break_chrom(d=pgs_dic_counts["pgs_ukbb_" + s])[bk]],       
+        # expand(config['output_dir'] + "/ukbb_score/{model}/{model}.total.txt", model=all_models.keys()),
+        # expand(config['output_dir'] + "/ukbb_score/ind_subset/{model}.score.txt", model=all_models.keys())
+        # expand(config['output_dir'] + "/benchmark/id.test.{trait}.txt", trait=trait2models.keys()),
+        # expand(config['output_dir'] + "/ukbb_score/prscsx_test/{trait}.score.txt", trait=trait2models.keys()),
+        # expand(config['output_dir'] + "/ukbb_score/test_subset/{model}.test.score.txt", model = all_models.keys()),
+        # config['output_dir'] + "/benchmark/auc_r2.txt"
+        # config['output_dir'] + "/benchmark/test_set/auc_r2.txt"
+        # expand(config['output_dir'] + "/model_QC2/failed_{model}", model = models2.keys()),
+        # expand(config['output_dir'] + "/model_QC2/pgs_ukbb_{model}", model = models2.keys())
+        # expand(config['output_dir'] + "/ukbb_score2/{model}/{model}.total.txt", model=models2.keys()),
+        # expand(config['output_dir'] + "/ukbb_score2/ind_subset/{model}.score.txt", model=models2.keys())
+        # expand(config['output_dir'] + "/ukbb_score2/prscsx_test/{trait}.{prsx}.score.txt", trait=trait2models2.keys(), prsx=prsx_all),
+        # expand(config['output_dir'] + "/ukbb_score2/test_subset/{model}.test.score.txt", model = models2.keys()),
+        config['output_dir'] + "/benchmark/test_set2/auc_r2.txt"
+
+rule score_qc:
+    """Given a PGS score, check for SNPs above info threshold and align alleles and weight in PGS file to UKBB if necessary. Martin called A2 as the reference allele and A1 as the alternative allele."""
+    input:
+        pgs=lambda wildcards: all_models[wildcards.model],
+        bbsnps=expand(config['geno_dir'] + "/ukb_mfi_chr{chrom}_v3.txt", chrom=[x+1 for x in range(22)])
+    params:
+        info=0.3,
+        cols=["CHR", "POS", "A2", "A1", "WEIGHT"],
+        out_dir=config['output_dir'] + "/model_QC"
+    output:
+        failed=config['output_dir'] + "/model_QC/failed_{model}",
+        pgs=config['output_dir'] + "/model_QC/pgs_ukbb_{model}"
+    script:
+        home_rapido + "/Scripts/SNPs_QC.py"
+        
+
+rule run_subscores:
+    """given a pgs score split by 100K variants and compute sub_score. Based on previous tests I decided to run jobs of 100K variants each using 4 cores"""
+    input:
+        bgen=config['geno_dir'] + "/ukb_imp_chr{chrom}_v3.bgen",
+        pgs=config['output_dir'] + "/model_QC/pgs_ukbb_{model}",
+    threads:
+        4
+    params:
+        genome_build=37,
+        chunk=10**5,
+        sub_chunk=2*10**3,
+        cols=["CHR", "POS",  "WEIGHT"],
+        chrom="{chrom}",
+        meta_dir=config['meta_dir']
+    wildcard_constraints:
+        chrom="\d+",
+        breaks="\d+",
+    output:
+        out=temp(config["output_dir"] + "/ukbb_score/{model}/{model}.{chrom}.{breaks}.txt")
+    script:
+        home_rapido + "/Scripts/test_eff.py"
+
+        
+rule sum_subscores:
+    """Given sub scores processed in chunks for a given pgs, add them together and add sample id. All sample files are the same, I just selected chrom 1 for simplicity."""
+    input:
+        scores=lambda wildcards: [config['output_dir'] + "/ukbb_score/" + wildcards.model + "/" + wildcards.model + ".{chrom}.{breaks}.txt".format(chrom=str(bk), breaks=str(v)) for bk 
+in break_chrom(d=pgs_dic_counts["pgs_ukbb_" + wildcards.model]).keys() for v in break_chrom(d=pgs_dic_counts["pgs_ukbb_" + wildcards.model])[bk]],
+        sample_bgen=config['pheno_dir'] + "/samplefiles/ukb30931_imp_chr1_v3_s487296.sample"
+    wildcard_constraints:
+        chrom="\d+",
+        breaks="\d+",
+    output:
+        scores=config['output_dir'] + "/ukbb_score/{model}/{model}.total.txt"
+    script:
+        home_rapido + "/Scripts/sum_subscores.py"
+    
+rule subset_score:
+    """Select relevant individuals to report score, same as in ld2pred paper, https://github.com/privefl/simus-PRS/blob/master/paper3-SCT/code_real/ plus only selecting White British individuals and excluding UKBB pilot study"""
+    input:
+        score=config['output_dir'] + "/ukbb_score/{model}/{model}.total.txt",
+        rel_ind=config["pheno_dir"] + "/keyfile/ukb30931_rel_s488264.dat",
+        eid=config['eid_pheno']
+    params:
+        trait=lambda wildcards: model_trait[wildcards.model]
+    output:
+        score=config['output_dir'] + "/ukbb_score/ind_subset/{model}.score.txt"
+    script:
+        "Scripts/{params.trait}.subset.R"
+        
+rule pgs_auc_r2:
+    """Assess model performace by calculating AUC and r2"""
+    input:
+        score=expand(config['output_dir'] + "/ukbb_score/ind_subset/{model}.score.txt", model=all_models.keys()),
+        excluded=expand(config['output_dir'] + "/model_QC/failed_{model}", model=all_models.keys()),
+        kept=expand(config['output_dir'] + "/model_QC/pgs_ukbb_{model}", model=all_models.keys()),
+    params:
+        out_dir=config['output_dir'] + "/benchmark"
+    output:
+        out=config['output_dir'] + "/benchmark/auc_r2.txt"
+    script:
+        "Scripts/metrics_pgs.R"
+
+
+rule train_test_split:
+    """Split individuals with phenotype and score 50/50 (params split) for training and testing PRSCSx and compare all scores with the test set. For splitting I use the ids from PRSCSx but from all scores from same phenotype are the same."""
+    input:
+        total=lambda wildcards: config['output_dir'] + "/ukbb_score/ind_subset/" + trait2models[wildcards.trait][0] + ".score.txt"
+    params:
+        split=0.5
+    output:
+        out=config['output_dir'] + "/benchmark/id.test.{trait}.txt"
+    script:
+        "Scripts/train_test_split.R"
+
+rule prscsx_score:
+    """Compute prscsx scores using train and test subsets of individuals"""
+    input:
+        test_ids=config['output_dir'] + "/benchmark/id.test.{trait}.txt",
+        scores=lambda wildcards: [config['output_dir'] + "/ukbb_score/ind_subset/" + x + ".score.txt" for x in  trait2models[wildcards.trait] ]
+    output:
+        out=config['output_dir'] + "/ukbb_score/prscsx_test/{trait}.score.txt"
+    script:
+        "Scripts/train_test_prscsx.R"
+        
+rule subset_test:
+    """For all models subset test individuals for fair comparison"""
+    input:
+        test_ids=lambda wildcards: config['output_dir'] + "/benchmark/id.test." + model_trait[wildcards.model] + ".txt",
+        score=config['output_dir'] + "/ukbb_score/ind_subset/{model}.score.txt"
+    output:
+        out=config['output_dir'] + "/ukbb_score/test_subset/{model}.test.score.txt"
+    run:
+        ids=pd.read_csv(input.test_ids, sep=" ")
+        score=pd.read_csv(input.score, sep=" ")
+        test=pd.merge(ids, score, on="f.eid")
+        test.to_csv(output.out, sep= " ", index=False)
+
+rule pgs_auc_r2_test:
+    """Assess model performace by calculating AUC and r2 only for individuals on test set"""
+    input:
+        score_prscsx= expand(config['output_dir'] + "/ukbb_score/prscsx_test/{trait}.score.txt", trait=trait2models.keys()),
+        score_other= expand(config['output_dir'] + "/ukbb_score/test_subset/{model}.test.score.txt", model = all_models.keys() ),
+        excluded=expand(config['output_dir'] + "/model_QC/failed_{model}", model=all_models.keys()),
+        kept=expand(config['output_dir'] + "/model_QC/pgs_ukbb_{model}", model=all_models.keys()),
+    params:
+        out_dir=config['output_dir'] + "/benchmark/test_set",
+        trait=[t for t in traits],
+    output:
+        out=config['output_dir'] + "/benchmark/test_set/auc_r2.txt"
+    script:
+        "Scripts/metrics_pgs_test_set.R"
+        
+######################################################################################  Compute PRSs for a second set of models      ##########
+###############################################################################
+
+        
+rule score_qc2:
+    """Given a PGS score, check for SNPs above info threshold and align alleles and weight in PGS file to UKBB if necessary. Martin called A2 as the reference allele and A1 as the alternative allele."""
+    input:
+        pgs=lambda wildcards: models2[wildcards.model],
+        bbsnps=expand(config['geno_dir'] + "/ukb_mfi_chr{chrom}_v3.txt", chrom=[x+1 for x in range(22)])
+    params:
+        info=0.3,
+        cols=["CHR", "POS", "A2", "A1", "WEIGHT"],
+        out_dir=config['output_dir'] + "/model_QC2"
+    output:
+        failed=config['output_dir'] + "/model_QC2/failed_{model}",
+        pgs=config['output_dir'] + "/model_QC2/pgs_ukbb_{model}"
+    script:
+        home_rapido + "/Scripts/SNPs_QC.py"
+        
+
+rule run_subscores2:
+    """given a pgs score split by 100K variants and compute sub_score. Based on previous tests I decided to run jobs of 100K variants each using 4 cores"""
+    input:
+        bgen=config['geno_dir'] + "/ukb_imp_chr{chrom}_v3.bgen",
+        pgs=config['output_dir'] + "/model_QC2/pgs_ukbb_{model}",
+    threads:
+        4
+    params:
+        genome_build=37,
+        chunk=10**5,
+        sub_chunk=2*10**3,
+        cols=["CHR", "POS",  "WEIGHT"],
+        chrom="{chrom}",
+        meta_dir=config['meta_dir']
+    wildcard_constraints:
+        chrom="\d+",
+        breaks="\d+",
+    output:
+        out=temp(config["output_dir"] + "/ukbb_score2/{model}/{model}.{chrom}.{breaks}.txt")
+    script:
+        home_rapido + "/Scripts/test_eff.py"
+
+        
+rule sum_subscores2:
+    """Given sub scores processed in chunks for a given pgs, add them together and add sample id. All sample files are the same, I just selected chrom 1 for simplicity."""
+    input:
+        scores=lambda wildcards: [config['output_dir'] + "/ukbb_score2/" + wildcards.model + "/" + wildcards.model + ".{chrom}.{breaks}.txt".format(chrom=str(bk), breaks=str(v)) for bk 
+in break_chrom(d=pgs_dic_counts2["pgs_ukbb_" + wildcards.model]).keys() for v in break_chrom(d=pgs_dic_counts2["pgs_ukbb_" + wildcards.model])[bk]],
+        sample_bgen=config['pheno_dir'] + "/samplefiles/ukb30931_imp_chr1_v3_s487296.sample"
+    wildcard_constraints:
+        chrom="\d+",
+        breaks="\d+",
+    output:
+        scores=config['output_dir'] + "/ukbb_score2/{model}/{model}.total.txt"
+    script:
+        home_rapido + "/Scripts/sum_subscores.py"
+    
+rule subset_score2:
+    """Select relevant individuals to report score, same as in ld2pred paper, https://github.com/privefl/simus-PRS/blob/master/paper3-SCT/code_real/ plus only selecting White British individuals and excluding UKBB pilot study"""
+    input:
+        score=config['output_dir'] + "/ukbb_score2/{model}/{model}.total.txt",
+        rel_ind=config["pheno_dir"] + "/keyfile/ukb30931_rel_s488264.dat",
+        eid=config['eid_pheno']
+    params:
+        trait=lambda wildcards: model_trait2[wildcards.model]
+    output:
+        score=config['output_dir'] + "/ukbb_score2/ind_subset/{model}.score.txt"
+    script:
+        "Scripts/{params.trait}.subset.R"
+        
+
+
+rule prscsx_score2:
+    """Compute prscsx scores using train and test subsets of individuals"""
+    input:
+        test_ids=config['output_dir'] + "/benchmark/id.test.{trait}.txt",
+        scores=lambda wildcards: [config['output_dir'] + "/ukbb_score2/ind_subset/" + x + ".score.txt" for x in  trait2prscs[wildcards.trait] ]  if wildcards.prsx == 'PRSCS_E' else [config['output_dir'] + "/ukbb_score2/ind_subset/" + x + ".score.txt" for x in  trait2models2[wildcards.trait]  if re.search(wildcards.prsx, x)] 
+    output:
+        out=config['output_dir'] + "/ukbb_score2/prscsx_test/{trait}.{prsx}.score.txt"
+    script:
+        "Scripts/train_test_prscsx2.R"
+        
+rule subset_test2:
+    """For all models subset test individuals for fair comparison"""
+    input:
+        test_ids=lambda wildcards: config['output_dir'] + "/benchmark/id.test." + model_trait2[wildcards.model] + ".txt",
+        score=config['output_dir'] + "/ukbb_score2/ind_subset/{model}.score.txt"
+    output:
+        out=config['output_dir'] + "/ukbb_score2/test_subset/{model}.test.score.txt"
+    run:
+        ids=pd.read_csv(input.test_ids, sep=" ")
+        score=pd.read_csv(input.score, sep=" ")
+        test=pd.merge(ids, score, on="f.eid")
+        test.to_csv(output.out, sep= " ", index=False)
+
+rule pgs_auc_r2_test2:
+    """Assess model performace by calculating AUC and r2 only for
+    individuals on test set. I have now also calculated confidence intervals."""
+    input:
+        score_prscsx= expand(config['output_dir'] + "/ukbb_score2/prscsx_test/{trait}.{prsx}.score.txt", trait=trait2models2.keys(), prsx=prsx_all),
+        score_other= expand(config['output_dir'] + "/ukbb_score2/test_subset/{model}.test.score.txt", model = models2.keys() ),
+        excluded=expand(config['output_dir'] + "/model_QC2/failed_{model}", model=models2.keys()),
+        kept=expand(config['output_dir'] + "/model_QC2/pgs_ukbb_{model}", model=models2.keys()),
+    params:
+        out_dir=config['output_dir'] + "/benchmark/test_set2",
+        trait=[t for t in traits],
+    output:
+        out=config['output_dir'] + "/benchmark/test_set2/auc_r2.txt"
+    script:
+        "Scripts/metrics_pgs_test_set2.R"
+        
+        
+        
+    
+        
+## snakemake  -k -j 1000 --cluster-config cpu.json --cluster "sbatch -A {cluster.account} -p {cluster.partition}  -c {cluster.cpus-per-task}   -t {cluster.time} --output {cluster.error} -J {cluster.job} "
+
