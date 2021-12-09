@@ -1,11 +1,7 @@
 ####################################################
-# dgx-server screens:
-
-# screen -r -D  28652.pts-0.node-11-2-3 # IBD
-# screen -r -D  57179.pts-1.node-11-1-1 # cross ancestry
-
-
-
+#
+# Initial shaPRS Cross-Ancestry analysis
+#
 #########################
 # static vars
 largePlinkMem=200000
@@ -501,6 +497,11 @@ print $3"\t"$4"\t"$2"\t"$5"\t"$6"\tX\t"$8"\t"$9"\t"$10"\t" N_eff
 ' OFS='\t' UKBB.GWAS1KG.EXOME.CAD.SOFT.META.PublicRelease.300517.txt > $eursumstatsLoc$'EUR_CAD_raw'
 head $eursumstatsLoc$'EUR_CAD_raw'
 
+awk '{if($8 > 0) {num++;} total++} END {print num/total}' UKBB.GWAS1KG.EXOME.CAD.SOFT.META.PublicRelease.300517.txt
+# 0.999675, almost all of the logORs are positive
+
+awk '{if($7 > 0) {num++;} total++} END {print num/total}'  $eursumstatsLoc$'EUR_CAD_raw'
+
 
 # get rid of ambigous alleles
 remove_ambiguous_alleles $eursumstatsLoc$'EUR_CAD_raw'
@@ -563,6 +564,9 @@ else { if( $3 in file1 ) {print $0} }
 ' OFS='\t' $hapmap3_b37bim $japsumstatsLoc$'JP_CAD_raw_noAmbiguousAlleles' > $japsumstatsLoc$'JP_CAD_hm3'
 head $japsumstatsLoc$'JP_CAD_hm3'
 wc -l $japsumstatsLoc$'JP_CAD_hm3' # 925414
+
+awk '{if($7 > 0) {num++;} total++} END {print num/total}'  $japsumstatsLoc$'JP_CAD_hm3'
+# 0.503286
 
 
 #################################
@@ -751,72 +755,72 @@ bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[h
 ###############
 
 
-# Ib)  run shaPRS to produce the coefs and the lFDRs - JAP_EUR
-# (IE running the other way around)
-pheno='JAP_EUR_asthma'
-shaPRS_new $japsumstatsLoc$'JP_asthma_hm3' $eursumstatsLoc$'EUR_asthma_hm3' $crossAncestryResults$pheno '0' $popBLDpanel $popALDpanel
+# # Ib)  run shaPRS to produce the coefs and the lFDRs - JAP_EUR
+# # (IE running the other way around)
+# pheno='JAP_EUR_asthma'
+# shaPRS_new $japsumstatsLoc$'JP_asthma_hm3' $eursumstatsLoc$'EUR_asthma_hm3' $crossAncestryResults$pheno '0' $popBLDpanel $popALDpanel
 
-pheno='JAP_EUR_height'
-shaPRS_new $japsumstatsLoc$'JP_height_hm3' $eursumstatsLoc$'EUR_height_hm3' $crossAncestryResults$pheno '0' $popBLDpanel $popALDpanel
+# pheno='JAP_EUR_height'
+# shaPRS_new $japsumstatsLoc$'JP_height_hm3' $eursumstatsLoc$'EUR_height_hm3' $crossAncestryResults$pheno '0' $popBLDpanel $popALDpanel
 
-pheno='JAP_EUR_T2D'
-shaPRS_new $japsumstatsLoc$'JP_T2D_hm3' $eursumstatsLoc$'EUR_T2D_hm3' $crossAncestryResults$pheno '0' $popBLDpanel $popALDpanel
-
-
-pheno='JAP_EUR_BRCA'
-shaPRS_new $japsumstatsLoc$'JP_BRCA_hm3' $eursumstatsLoc$'EUR_BRCA_hm3' $crossAncestryResults$pheno '0' $popBLDpanel $popALDpanel
+# pheno='JAP_EUR_T2D'
+# shaPRS_new $japsumstatsLoc$'JP_T2D_hm3' $eursumstatsLoc$'EUR_T2D_hm3' $crossAncestryResults$pheno '0' $popBLDpanel $popALDpanel
 
 
-pheno='JAP_EUR_CAD'
-shaPRS_new $japsumstatsLoc$'JP_CAD_hm3' $eursumstatsLoc$'EUR_CAD_hm3' $crossAncestryResults$pheno '0' $popBLDpanel $popALDpanel
+# pheno='JAP_EUR_BRCA'
+# shaPRS_new $japsumstatsLoc$'JP_BRCA_hm3' $eursumstatsLoc$'EUR_BRCA_hm3' $crossAncestryResults$pheno '0' $popBLDpanel $popALDpanel
+
+
+# pheno='JAP_EUR_CAD'
+# shaPRS_new $japsumstatsLoc$'JP_CAD_hm3' $eursumstatsLoc$'EUR_CAD_hm3' $crossAncestryResults$pheno '0' $popBLDpanel $popALDpanel
 
 
 
-# (wait for above to finish on cluster)
-# convert LDpredformat to PRS-CS format:
-# NOTE: we are using the PRS-CS EUR format (ldblk_ukbb_eur) as a template, as we want the EUR LD-blocks  (and not the ldblk_ukbb_eas)
-pheno='JAP_EUR_asthma'
-arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eur/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$asthmaEASRef$'/'
-bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
+# # (wait for above to finish on cluster)
+# # convert LDpredformat to PRS-CS format:
+# # NOTE: we are using the PRS-CS EUR format (ldblk_ukbb_eur) as a template, as we want the EUR LD-blocks  (and not the ldblk_ukbb_eas)
+# pheno='JAP_EUR_asthma'
+# arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eur/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$asthmaEASRef$'/'
+# bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
 
-pheno='JAP_EUR_height'
-arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eur/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$heightEASRef$'/'
-bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
+# pheno='JAP_EUR_height'
+# arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eur/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$heightEASRef$'/'
+# bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
 
-pheno='JAP_EUR_T2D'
-arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eur/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$t2dEASRef$'/'
-bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
+# pheno='JAP_EUR_T2D'
+# arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eur/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$t2dEASRef$'/'
+# bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
 
-pheno='JAP_EUR_BRCA'
-arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eur/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$brcaEASRef$'/'
-bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
+# pheno='JAP_EUR_BRCA'
+# arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eur/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$brcaEASRef$'/'
+# bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
 
-pheno='JAP_EUR_CAD'
-arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eur/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$cadEASRef$'/'
-bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
+# pheno='JAP_EUR_CAD'
+# arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eur/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$cadEASRef$'/'
+# bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
 
-#####
-## Try it with EAS PRS-CS LD panel
+# #####
+# ## Try it with EAS PRS-CS LD panel
 
-pheno='JAP_EUR_asthma'
-arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eas/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$asthmaEASRef$'/'
-bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
+# pheno='JAP_EUR_asthma'
+# arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eas/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$asthmaEASRef$'/'
+# bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
 
-pheno='JAP_EUR_height'
-arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eas/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$heightEASRef$'/'
-bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
+# pheno='JAP_EUR_height'
+# arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eas/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$heightEASRef$'/'
+# bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
 
-pheno='JAP_EUR_T2D'
-arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eas/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$t2dEASRef$'/'
-bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
+# pheno='JAP_EUR_T2D'
+# arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eas/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$t2dEASRef$'/'
+# bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
 
-pheno='JAP_EUR_BRCA'
-arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eas/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$brcaEASRef$'/'
-bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
+# pheno='JAP_EUR_BRCA'
+# arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eas/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$brcaEASRef$'/'
+# bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
 
-pheno='JAP_EUR_CAD'
-arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eas/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$cadEASRef$'/'
-bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
+# pheno='JAP_EUR_CAD'
+# arguments='/nfs/users/nfs_m/mk23/scripts/ConvertLDpred2ToPRSCS_v4.R '$prscsrefs$'ldblk_ukbb_eas/ '$crossAncestryResults$pheno$'/ '$prscsrefs$'ldblk_ukbb_'$cadEASRef$'/'
+# bsub -q normal -m "modern_hardware" -G team152 -n7 -J ${pheno}_LDCONV -R "span[hosts=1] select[mem>${largePlinkMem}] rusage[mem=${largePlinkMem}]" -M${largePlinkMem} -o $crossAncestryResults$pheno$'_LDCONV.out' -e $crossAncestryResults$pheno$'_LDCONV.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
 
 
 
@@ -831,9 +835,11 @@ head $crossAncestryResults$'EUR_JAP_height_sumstats_meta_old'
 ############################################################################
 
 
+## UNUSED ORIGINAL LDPRED2 ANALYSIS START
+# Not used because when we added PRS-CSx we wanted them to use the exact same number of SNPs
+# so all LDpred2 analyses had to be re-run on same panel of SNPs that were left after the intersection of the QC here and what is in _shaPRS-crossAncestry_prscsx.sh
 
-
-j=3
+j=4
 
 
 PRS_array=( 'EUR_JAP_asthma' 'EUR_JAP_height' 'EUR_JAP_BRCA' 'EUR_JAP_CAD' 'EUR_JAP_T2D' )
@@ -851,9 +857,19 @@ EURPheno=${EUR_array[$j-1]}
 JPTPheno=${JPT_array[$j-1]} 
 
 
-# visualise
+# visualise a
 arguments='/nfs/users/nfs_m/mk23/scripts/shaPRS_qval_manhattan.R '$crossAncestryResults$pheno$'_SE_meta '$crossAncestryResults$pheno$'_lFDR_meta_SNP_lFDR '$crossAncestryResults$pheno$' '$pheno$' '$crossAncestryResults$pheno$'_sumstats_meta'
 /nfs/team152/mk23/software/R_X_farm/R-3.6.1/bin/Rscript $arguments
+
+
+$crossAncestryResults$pheno$'_SE_meta'
+$crossAncestryResults$pheno$'_lFDR_meta_SNP_lFDR'
+$crossAncestryResults$pheno
+$pheno
+$crossAncestryResults$pheno$'_sumstats_meta'
+
+# head $crossAncestryResults$pheno$'_SE_meta'
+
 
 #done
 
@@ -974,8 +990,6 @@ fi
 done
 
 
-
-# !!! HERE
 
 ############################################################################
 
@@ -1153,6 +1167,9 @@ $crossAncestryResults$'shaPRS_LD_'$pheno
 
 $crossAncestryResults$PRSName$'.profile'
 
+## UNUSED ORIGINAL LDPRED2 ANALYSIS END
+#############################################################################
+
 
 function evaluatePRS {
 famFile=$1
@@ -1255,45 +1272,6 @@ rm -rf $sumData$'_plinkformat_temp'
 
 
 
-
-
-
-pheno='EUR_JAP_BRCA'
-
-pheASumstats=$eursumstatsLoc$'EUR_BRCA_hm3' 
-pheBSumstats=$japsumstatsLoc$'JP_BRCA_hm3' 
-outPutLocation=$crossAncestryResults$pheno 
-rho='0'
-
-
-
-pheno='EUR_JAP_T2D'
-#shaPRS_new $eursumstatsLoc$'EUR_BRCA_hm3' $japsumstatsLoc$'JP_BRCA_hm3' $crossAncestryResults$pheno '0' $popALDpanel $popBLDpanel
-
-
-subphenoLoc =  "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/sumstats/eur/EUR_asthma_hm3"
-subpheno_otherLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/sumstats/jap/JP_asthma_hm3"
-blendFactorLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_asthma_lFDR_meta_SNP_lFDR"
-rho =0
-outputLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_asthma_sumstats_meta"
-
-
-pheno='EUR_JAP_BRCA'
-shaPRS_new $eursumstatsLoc$'EUR_BRCA_hm3' $japsumstatsLoc$'JP_BRCA_hm3' $crossAncestryResults$pheno '0' $popALDpanel $popBLDpanel
-
-
-
-
-outPutLocation=$crossAncestryResults$'EUR_JAP_T2D'
-pheASumstats=$eursumstatsLoc$'EUR_T2D_hm3'
-pheBSumstats=$japsumstatsLoc$'JP_T2D_hm3'
-rho='0'
-
-outPutLocation=$crossAncestryResults$'EUR_JAP_asthma'
-pheASumstats=$eursumstatsLoc$'EUR_asthma_hm3'
-pheBSumstats=$japsumstatsLoc$'JP_asthma_hm3'
-rho='0'
-
 # Performs the shaPRS step that produces a _sumstats formatted file for both the blended and the combined sumstats, together with a PRS specific LD matrix under $outPutLocation
 function shaPRS_new { 
 pheASumstats=$1
@@ -1312,7 +1290,7 @@ if (FNR == 1) {print "SNP\tCHR\tBP\tBeta_A\tSE_A\tA1.x\tA2.x\tBeta_B\tSE_B\tA1.y
 if ( $3 in file1) { print $3"\t"$1"\t"$2"\t"file1[$3]"\t"$7"\t"$8"\t"$4"\t"$5} }   }
 }
 ' $pheBSumstats $pheASumstats > $outPutLocation$'_SE_meta'
-
+# the above is incorrect, as I label pheB Beta_A, and pheA Beta_B, but it doesn't matter as shaPRS_adjust_wrapper is symmetric, and sumstatsBlender_shaPRS_meta_wrapper.R gets the correct pheA
 
 
 # Export out the lFDR values
@@ -1341,20 +1319,11 @@ export -f shaPRS_new # this makes local functions executable when bsubbed
 
 
 
-Pop1LDRefLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/shaprs/raw/ldpred2/"
-Pop2LDRefLoc ="/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/shaprs/raw/JPTRef/"
-blendFactorLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_BRCA_lFDR_meta_SNP_lFDR"
-sumstatsLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_BRCA_SE_meta"
-outputLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_BRCA"
-produceBasicLDreftoo = T
-shaPRSscriptLoc="/nfs/users/nfs_m/mk23/scripts/shaPRS.R"
-
-
 #################################################
 
 
-sumstatsLoc=$eursumstatsLoc$'EUR_asthma_hm3'
-MAFLoc=$crossAncestrySumStats$'EUR_MAF_hm3.frq'
+#sumstatsLoc=$eursumstatsLoc$'EUR_asthma_hm3'
+#MAFLoc=$crossAncestrySumStats$'EUR_MAF_hm3.frq'
 
 # adds MAF to a sumstats file from a .frq file
 function addMAF { 
@@ -1387,10 +1356,12 @@ export -f addMAF # this makes local functions executable when bsubbed
 
 
 
+####################################################
+# MISC ANALYSIS:
+#############
 
-
-
-# find out the Genetic correlation between the EUR and JAP summary data for the same traits
+#########
+# 1) find out the Genetic correlation between the EUR and JAP summary data for the same traits
 ldscDir='/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/0_software/ldsc_new/'
 ldscDirCondaEnv='/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/0_software/ldsc_new/ldscDirCondaEnv/'
 lsdc=$ldscDir$'ldsc/ldsc.py'
@@ -1489,128 +1460,8 @@ $lsdc --rg $eursumstatsLoc$'EUR_asthma_hm3'.sumstats.sumstats.gz,$japsumstatsLoc
 
 
 
-
-#################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-[1] "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/shaprs/raw/ldpred2/"                                               
-[2]
-                                                                                                          
-                                
-                                                                                 
-                             
-                                                                         
- 
-
-baseLoc="/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/shaprs/raw/ldpred2/"  
-sumstatsLoc= "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_height_sumstats_meta_combined"
-NCORES= 15                                                                                      
-n_eff=244864                                                                                   
-outLoc= "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/"                     
-outName="Combined_EUR_LD_EUR_JAP_height"                                                                          
-testSetLoc="/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/sumstats/all"                 
-shaPRSscriptLoc= "/nfs/users/nfs_m/mk23/scripts/shaPRS.R"                                                            
-binary_outcome=T       
-
-
-baseLoc="/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_BRCA/"        
-sumstatsLoc="/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_BRCA_sumstats_meta_combined"
-NCORES= 15                                                                                      
-n_eff=127781                                                                                   
-outLoc= "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/"                     
-outName="Combined_LD_EUR_JAP_BRCA"                                                                          
-testSetLoc="/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/sumstats/all"                 
-shaPRSscriptLoc= "/nfs/users/nfs_m/mk23/scripts/shaPRS.R"                                                            
-binary_outcome=T                                                        
-
-
-
-
-subphenoLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/sumstats/eur/EUR_asthma_hm3"
-subpheno_otherLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/sumstats/jap/JP_asthma_hm3"
-blendFactorLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_asthma_lFDR_meta_SNP_lFDR"
-rho = 0
-outputLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_asthma_sumstats_meta"
-shaPRSscriptLoc= "/nfs/users/nfs_m/mk23/scripts/shaPRS.R"   
-
-
-
-	
-	
-Pop1LDRefLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/shaprs/raw/ldpred2/"       
-Pop2LDRefLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/shaprs/raw/JPTRef/"        
-blendFactorLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_asthma_lFDR_meta_SNP_lFDR"
-sumstatsLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_asthma_SE_meta"
-outputLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_asthma2"
-produceBasicLDreftoo = T                                                                     
-shaPRSscriptLoc="/nfs/users/nfs_m/mk23/scripts/shaPRS.R"
-
-typeof(inputData$SE_A)
-
-as.numeric(inputData$SE_A[1])
-nrow(inputData)
-
-
-non_nomerics <- which(is.na(as.numeric(as.character(inputData$SE_A))))
-nonNumericInputDatas = inputData[non_nomerics,]
-
-inputDataLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_BRCA_SE_meta"
-inputDataLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/scratch/_badData"
-outputLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/results/EUR_JAP_BRCA_lFDR_meta"
-shaPRSscriptLoc = "/nfs/users/nfs_m/mk23/scripts/shaPRS.R"
-
-
-inputData_subset=inputData[1:5,]
-
-inputData_subset$SE_A * inputData_subset$SE_B
-
-as.numeric(inputData_subset$SE_A) * as.numeric(inputData_subset$SE_B)
-
-nonNumericA_incides = which(!is.numeric(inputData$SE_A) )
-
-nonNumericB_incides = which(!is.numeric(inputData$SE_B) )
-
-
-nonNumericinputData = inputData[which(!is.numeric(inputData$SE_A) ),]
-
-inputData[which(!is.numeric(inputData$SE_B) ),]
-
-
-SNP        CHR     BP    Beta_A    SE_A          A_effectAllele Beta_B   SE_B
-rs1048488   1 7   60912  0.11737  0.8249            T           0.061    0.031
-
-nonNumericinputData$SE_A
-
-as.numeric(nonNumericinputData$SE_A) * as.numeric(nonNumericinputData$SE_B)
-
-inputData_subset$SE_A = as.numeric(as.character(inputData_subset$SE_A))
-
-as.numeric(as.character(nonNumericinputData$SE_A)) * as.numeric(as.character(nonNumericinputData$SE_B))
-
-Pop1LDRefLoc = args[1]
-Pop2LDRefLoc = args[2]
-blendFactorLoc = args[3]
-sumstatsLoc = args[4]
-outputLoc = args[5]
-produceBasicLDreftoo = (args[6] == '1')
-shaPRSscriptLoc= args[7]
-
-
-Cholmod error 'problem too large' at file ../Core/cholmod_dense.c, line 102
-
 ##############################################################
-# 1) Generate JP RDMS LD panel for hapmap3
+# 2) Generate JP RDMS LD panel for hapmap3
 ###########################
 # install R 4, as Rapido now requires R > 4.0
 cd /nfs/team152/mk23/software/R_X_farm
@@ -1844,48 +1695,5 @@ all_map_rds = rbind(all_map_rds,chr_map_rds)
 fileLoc= paste0(outputLoc,"map.rds")
 saveRDS(all_map_rds,file = fileLoc)
 print(paste0("written overall map to ",fileLoc ))
-
-
-
-
-# 4. execute on console generating chr21 PRS LDRefGen ( asthma)
-# 5. loop and submit all 22 chroms as jobs
-# 6. script to concat/merge a map.rds from the 22 blended LDref
-# 7. execute RapidoMulti
-
-# 2) implement the final version of the LD blending scripts/ a
-# this should output an LD ref panel for each run, which will be used 
-# also prepare baselines:
-# original (single with no LDref)a
-# LD_EUR(1-lfDR) + LD_JP(LFDR)
-
-
-# 3) re-run Asthma with hapmap3 with RapidoPGS-multi a
-
-
-echo $crossAncestrySumStats$'old/_lFDR_meta_SNP_lFDR_hapmap3_WITH_HLA'
-echo $crossAncestrySumStats$'old/_SE_meta_hapmap3_WITH_HLA'
-
-
-
-
-
-library("bigsnpr")
-
-Pop1LDRefLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/shaprs/raw/ldpred2/"
-Pop2LDRefLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/shaprs/raw/JPTRef/"
-chromNum = 21
-blendFactorLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/sumstats/old/_lFDR_meta_SNP_lFDR_hapmap3_WITH_HLA"
-sumstatsLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/sumstats/old/_SE_meta_hapmap3_WITH_HLA"
-outputLoc = "/lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/asthma/crossAncestry/sumstats/old/asthmaOut"
-produceBasicLDreftoo = T
-shaPRSscriptLoc = '/nfs/users/nfs_m/mk23/scripts/shaPRS.R'
-
-chromNum=21
-
-
-
-
-
 
 

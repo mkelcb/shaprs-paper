@@ -1,6 +1,8 @@
 ####################################################
-# screens:
-
+#
+# Follow-up shaPRS Cross-Ancestry analysis that included PRS-CSx
+#
+#########################
 # screen -r -D  28652.pts-0.node-11-2-3 # IBD
 # screen -r -D  57179.pts-1.node-11-1-1 # cross ancestry
 
@@ -265,27 +267,24 @@ validBim=$eursumstatsLoc$EURPheno$'_validBim'
 # we are comparing ourselves most directly to the EUR PRS-CSx, so use that as a subset
 # wc -l $crossAncestryResults$pheno$'_EAS_PRSCSx_no_dupes'
 
-#awk 'FNR == NR { sums[ $2 ] = $2; next; } FNR <= NR { if( FNR == 1 || $3 in sums) {print $0 } }
-#' $crossAncestryResults$pheno$'_EUR_PRSCSx_no_dupes' $eursumstatsLoc$EURPheno$'_QC' > $eursumstatsLoc$EURPheno$'_QC_CSxsubset'
+awk 'FNR == NR { sums[ $2 ] = $2; next; } FNR <= NR { if( FNR == 1 || $3 in sums) {print $0 } }
+' $crossAncestryResults$pheno$'_EUR_PRSCSx_no_dupes' $eursumstatsLoc$EURPheno$'_QC' > $eursumstatsLoc$EURPheno$'_QC_CSxsubset'
 
-#awk 'FNR == NR { sums[ $2 ] = $2; next; } FNR <= NR { if( FNR == 1 || $3 in sums) {print $0 } }
-#' $crossAncestryResults$pheno$'_EUR_PRSCSx_no_dupes' $crossAncestryResults$pheno'_sumstats_meta_QC' > $crossAncestryResults$pheno'_sumstats_meta_QC_CSxsubset'
+awk 'FNR == NR { sums[ $2 ] = $2; next; } FNR <= NR { if( FNR == 1 || $3 in sums) {print $0 } }
+' $crossAncestryResults$pheno$'_EUR_PRSCSx_no_dupes' $crossAncestryResults$pheno'_sumstats_meta_QC' > $crossAncestryResults$pheno'_sumstats_meta_QC_CSxsubset'
 
 
 # Do QC for the JAP ShaPRS sumstats too to bring it in line with the rest
-#awk 'FNR == NR { sums[ $1 ] = $1; next; } FNR <= NR { if( FNR == 1 || $3 in sums  ) {print $0 } }
-#' $crossAncestryResults$pheno$'_sumstats_meta_QC_keep' $crossAncestryResults$pheno_JAP$'_sumstats_meta'  > $crossAncestryResults$pheno_JAP$'_sumstats_meta_QC'
+awk 'FNR == NR { sums[ $1 ] = $1; next; } FNR <= NR { if( FNR == 1 || $3 in sums  ) {print $0 } }
+' $crossAncestryResults$pheno$'_sumstats_meta_QC_keep' $crossAncestryResults$pheno_JAP$'_sumstats_meta'  > $crossAncestryResults$pheno_JAP$'_sumstats_meta_QC'
 
-#awk 'FNR == NR { sums[ $2 ] = $2; next; } FNR <= NR { if( FNR == 1 || $3 in sums) {print $0 } }
-#' $crossAncestryResults$pheno$'_EUR_PRSCSx_no_dupes' $crossAncestryResults$pheno_JAP'_sumstats_meta_QC' > $crossAncestryResults$pheno_JAP'_sumstats_meta_QC_CSxsubset'
-
-
-
+awk 'FNR == NR { sums[ $2 ] = $2; next; } FNR <= NR { if( FNR == 1 || $3 in sums) {print $0 } }
+' $crossAncestryResults$pheno$'_EUR_PRSCSx_no_dupes' $crossAncestryResults$pheno_JAP'_sumstats_meta_QC' > $crossAncestryResults$pheno_JAP'_sumstats_meta_QC_CSxsubset'
 
 # 2) Convert them to PRS-CS format
-#convertToPRSCS $eursumstatsLoc$EURPheno$'_QC_CSxsubset' $binPheno
-#convertToPRSCS $crossAncestryResults$pheno'_sumstats_meta_QC_CSxsubset' $binPheno
-# convertToPRSCS $crossAncestryResults$pheno_JAP'_sumstats_meta_QC_CSxsubset' $binPheno
+convertToPRSCS $eursumstatsLoc$EURPheno$'_QC_CSxsubset' $binPheno
+convertToPRSCS $crossAncestryResults$pheno'_sumstats_meta_QC_CSxsubset' $binPheno
+convertToPRSCS $crossAncestryResults$pheno_JAP'_sumstats_meta_QC_CSxsubset' $binPheno
 
 
 
@@ -306,7 +305,7 @@ echo "LDpred SUBMITTING: "$pheno$'_EUR crhom'$i
 avgNumIndis=$(tail -n 1 $eursumstatsLoc$EURPheno | awk '{ print $10}')
 arguments='/nfs/users/nfs_m/mk23/scripts/LDpred2_auto_chrom.R /lustre/scratch123/hgi/mdt1/projects/crohns/mk23/0Thesis/shaprs/raw/ldpred2/ '$eursumstatsLoc$EURPheno$'_QC_CSxsubset '$i$' '$avgNumIndis$' '$crossAncestryResults$' EUR_EUR_LD_'$pheno$'_CSxsubset_'$i$' '$crossAncestrySumStats$'all_hm3 '$shaPRSscriptLoc$' '$binPheno
 #bsub -q normal -m "modern_hardware" -G team152 -n1 -J EUR_EUR_LD_${pheno}_${i} -R "span[hosts=1] select[mem>${plinkMem}] rusage[mem=${plinkMem}]" -M${plinkMem} -o $crossAncestryResults$'EUR_EUR_LD_'$pheno$'_'$i$'.out' -e $crossAncestryResults$'EUR_EUR_LD_'$pheno$'_'$i$'.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
-#$Rscript $arguments
+
 
 fi
 
@@ -322,7 +321,6 @@ else
 echo "ShaPRS SUBMITTING: "$pheno$'_EUR crhom'$i
 avgNumIndis=$(tail -n 1 "$crossAncestryResults$pheno"_sumstats_meta | awk '{ print $10}')
 arguments='/nfs/users/nfs_m/mk23/scripts/LDpred2_auto_chrom.R '$crossAncestryResults$pheno$'/ '$crossAncestryResults$pheno'_sumstats_meta_QC_CSxsubset '$i$' '$avgNumIndis$' '$crossAncestryResults$' shaPRS_LD_'$pheno$'_CSxsubset_'$i$' '$crossAncestrySumStats$'all_hm3 '$shaPRSscriptLoc$' '$binPheno
-
 #bsub -q normal -m "modern_hardware" -G team152 -n1 -J shaPRS_LD_${pheno}_${i} -R "span[hosts=1] select[mem>${plinkMem}] rusage[mem=${plinkMem}]" -M${plinkMem} -o $crossAncestryResults$'shaPRS_LD_'$pheno$'_'$i$'.out' -e $crossAncestryResults$'shaPRS_LD_'$pheno$'_'$i$'.err'  "/nfs/team152/mk23/software/R_X_farm/R-4.1.0/bin/Rscript $arguments"
 fi
 
@@ -342,21 +340,6 @@ b=1
 
 fi
 
-
-################################
-# THE HEIGHT DOUBLE CHECK
-# outfile=$crossAncestryResults$pheno$'_EUR_ORIG/_pst_eff_a1_b0.5_phiauto_chr'$i$'.txt'
-# rm -rf $outfile
-# if [ -s "$outfile" ] ; then
-# #echo "ALREADY EXISTS: "$outfile
-# b=1
-# else
-# b=1
-# #echo "PRS-CS SUBMITTING: "$pheno$'_EUR '$i
-# bsub -q normal -m "modern_hardware" -G team152 -n${NCORES_LDPred2} -J ${pheno}${shaPRS}_${i} -R "span[hosts=1] select[mem>${plinkMem}] rusage[mem=${plinkMem}]" -M${plinkMem} -o $crossAncestryResults$'logs/'$pheno$shaPRS$'_'$i$'.out' -e $crossAncestryResults$'logs/'$pheno$shaPRS$'_'$i'.err'  "performPRSCS_custom $eursumstatsLoc$EURPheno$'_QC_CSxsubset_PRSCS' $Neur $eursumstatsLoc$EURPheno$'_validBim' $pheno$'_EUR_ORIG' $i $NCORES_LDPred2 $prscsrefs'ldblk_ukbb_'$heightEURRef$'orig'"
-
-# fi
-################################
 
 
 
@@ -494,15 +477,15 @@ famFile=${famFiles[$j-1]}
 
 #EUR EUR
 arguments=' --memory '$plinkMem$' --allow-no-sex --bfile '$crossAncestrySumStats$'all_hm3 --fam '$famFile$' --score '$crossAncestryResults$pheno$'_EUR_EUR_PRSCS_no_dupes 2 4 6 sum --out '$crossAncestryResults$pheno$'_EUR_EUR_PRSCS.PRS'
-#$plink $arguments
+$plink $arguments
 
 #SHAPRS EUR
 arguments=' --memory '$plinkMem$' --allow-no-sex --bfile '$crossAncestrySumStats$'all_hm3 --fam '$famFile$' --score '$crossAncestryResults$pheno$shaPRS$'_EUR_PRSCS_no_dupes 2 4 6 sum --out '$crossAncestryResults$pheno$shaPRS$'_EUR_PRSCS.PRS'
-#$plink $arguments
+$plink $arguments
 
 #SHAPRS EAS
 arguments=' --memory '$plinkMem$' --allow-no-sex --bfile '$crossAncestrySumStats$'all_hm3 --fam '$famFile$' --score '$crossAncestryResults$pheno$shaPRS$'_EAS_PRSCS_no_dupes 2 4 6 sum --out '$crossAncestryResults$pheno$shaPRS$'_EAS_PRSCS.PRS'
-#$plink $arguments
+$plink $arguments
 
 
 # evaluate the unweighted PRS-CS ones   
@@ -525,7 +508,7 @@ evaluatePRS_NOVALID $famFile $pheno$shaPRS$'_EUR_PRSCS.PRS' $binPheno
 #SHAPRS PRS BLEND
 # 3) Perform Stage 2: find the best linear combination of the EUR/EAS + evaluate
 arguments='/nfs/users/nfs_m/mk23/scripts/PRSLinearComb2.R '$crossAncestryResults$pheno$shaPRS$'_EUR_PRSCS.PRS.profile '$crossAncestryResults$pheno$shaPRS$'_EAS_PRSCS.PRS.profile '$famFile$' '$crossAncestrySumStats$'all_TEST '$binPheno$' '$crossAncestryResults$pheno$shaPRS$'_EUR_EAS_PRSCS_result'
-#/nfs/team152/mk23/software/R_X_farm/R-3.6.1/bin/Rscript $arguments
+/nfs/team152/mk23/software/R_X_farm/R-3.6.1/bin/Rscript $arguments
 
 
 # asthma:
@@ -541,11 +524,11 @@ arguments='/nfs/users/nfs_m/mk23/scripts/PRSLinearComb2.R '$crossAncestryResults
 # b) LDpred2
 # EUR EUR baseline
 arguments=' --memory '$plinkMem$' --allow-no-sex --bfile '$crossAncestrySumStats$'all_hm3 --fam '$famFile$' --score '$crossAncestryResults$pheno$'_EUR_EUR_LDpred2_CSxsubset_no_dupes sum --out '$crossAncestryResults$pheno$'_EUR_EUR_LDpred2_CSxsubset.PRS'
-#$plink $arguments
+$plink $arguments
 
 # shaPRS
 arguments=' --memory '$plinkMem$' --allow-no-sex --bfile '$crossAncestrySumStats$'all_hm3 --fam '$famFile$' --score '$crossAncestryResults$pheno$'_shaPRS_LDpred2_CSxsubset_no_dupes sum --out '$crossAncestryResults$pheno$'_shaPRS_LDpred2_CSxsubset.PRS'
-#$plink $arguments
+$plink $arguments
 
 # evaluate the LDpred2 PRS too
 evaluatePRS_NOVALID $famFile $pheno$'_EUR_EUR_LDpred2_CSxsubset.PRS' $binPheno
@@ -561,15 +544,15 @@ evaluatePRS_NOVALID $famFile $pheno$'_shaPRS_LDpred2_CSxsubset.PRS' $binPheno
 # PRS-CSx ShaPRS
 #EUR 
 arguments=' --memory '$plinkMem$' --allow-no-sex --bfile '$crossAncestrySumStats$'all_hm3 --fam '$famFile$' --score '$crossAncestryResults$pheno$'_EUR_PRSCSx_ShaPRS_no_dupes 2 4 6 sum --out '$crossAncestryResults$pheno$'_EUR_PRSCSx_ShaPRS.PRS'
-#$plink $arguments
+$plink $arguments
 
 #EAS 
 arguments=' --memory '$plinkMem$' --allow-no-sex --bfile '$crossAncestrySumStats$'all_hm3 --fam '$famFile$' --score '$crossAncestryResults$pheno$'_EAS_PRSCSx_ShaPRS_no_dupes 2 4 6 sum --out '$crossAncestryResults$pheno$'_EAS_PRSCSx_ShaPRS.PRS'
-#$plink $arguments
+$plink $arguments
 
 # 3) Perform Stage 2: find the best linear combination of the EUR/EAS + evaluate
 arguments='/nfs/users/nfs_m/mk23/scripts/PRSLinearComb2.R '$crossAncestryResults$pheno$'_EUR_PRSCSx_ShaPRS.PRS.profile '$crossAncestryResults$pheno$'_EAS_PRSCSx_ShaPRS.PRS.profile '$famFile$' '$crossAncestrySumStats$'all_TEST '$binPheno$' '$crossAncestryResults$pheno$'_PRSCSx_result_ShaPRS'
-#/nfs/team152/mk23/software/R_X_farm/R-3.6.1/bin/Rscript $arguments
+/nfs/team152/mk23/software/R_X_farm/R-3.6.1/bin/Rscript $arguments
 
 # asthma: 
 # correlation_sq 0.012 /  AUC 0.5975
@@ -579,14 +562,9 @@ arguments='/nfs/users/nfs_m/mk23/scripts/PRSLinearComb2.R '$crossAncestryResults
 
 #####################
 
-
-
-
 fi
 
 done
-
-
 
 
 
@@ -682,6 +660,34 @@ convertPRS_PRSCSx $crossAncestryResults$pheno$'_EAS_PRSCSx_ShaPRS'
 # compress them 
 zip $crossAncestryResults$pheno'_PRSCSx_ShaPRS.zip' $crossAncestryResults$pheno$'_EUR_PRSCSx_ShaPRS_E' $crossAncestryResults$pheno$'_EAS_PRSCSx_ShaPRS_E'
 
+
+
+# Zip up all final PRS files for all traits
+
+# PRS-CS
+$crossAncestryResults$pheno$'_EUR_EUR_PRSCS' 
+$crossAncestryResults$pheno$shaPRS$'_EUR_PRSCS' 
+
+# PRS-CSx
+$crossAncestryResults$pheno$'_EUR_PRSCSx'
+$crossAncestryResults$pheno$'_EAS_PRSCSx'
+
+#LDpred
+$crossAncestryResults$pheno$'_EUR_EUR_LDpred2_CSxsubset'
+$crossAncestryResults$pheno$'_shaPRS_LDpred2_CSxsubset'
+
+
+$crossAncestryResults$pheno$'_EUR_EUR_PRSCS' $crossAncestryResults$pheno$'_shaPRS_EUR_PRSCS' $crossAncestryResults$pheno$'_EUR_PRSCSx' $crossAncestryResults$pheno$'_EAS_PRSCSx' $crossAncestryResults$pheno$'_EUR_EUR_LDpred2_CSxsubset' $crossAncestryResults$pheno$'_shaPRS_LDpred2_CSxsubset'
+
+zip -j $crossAncestryResults$'ALL_PRS.zip' 
+
+'EUR_JAP_CAD'
+'EUR_JAP_T2D'
+'EUR_JAP_BRCA'
+'EUR_JAP_asthma'
+'EUR_JAP_height'
+
+$crossAncestryResults$'EUR_JAP_CAD'$'_EUR_EUR_PRSCS' $crossAncestryResults$'EUR_JAP_CAD'$shaPRS$'_EUR_PRSCS' $crossAncestryResults$'EUR_JAP_CAD'$'_EUR_PRSCSx' $crossAncestryResults$'EUR_JAP_CAD'$'_EAS_PRSCSx' $crossAncestryResults$'EUR_JAP_CAD'$'_EUR_EUR_LDpred2_CSxsubset' $crossAncestryResults$'EUR_JAP_CAD'$'_shaPRS_LDpred2_CSxsubset'
 
 
 
@@ -836,11 +842,6 @@ evaluatePRS_NOVALID $famFile $pheno$shaPRS$'_EUR_PRSCS.PRS' 1
        AUC   0.67		   0.67				  0.66						0.67
 
 
-
-
-EUR_JAP_CAD_EUR_EUR_PRSCS_E.test
-0.68
-0.0195
 
 
 #################################################
