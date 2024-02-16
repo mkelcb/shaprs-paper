@@ -26,7 +26,3 @@ Code for new analyses for the v2 of the manuscript can be found under /revisions
 1. IBD_reNewWave_pub.sh: new IBD results that incorporates MTAG
 2. shaPRS_RevisionSim2: expanded simulations that incorporates MTAG
 3. shaPRS_revisionAFR.sh: expanded cross-ancestry analyses that adds the UGR data
-
-
-Code for new analyses for the v3 of the manuscript can be found under /revisions_ajhg/: 
-
